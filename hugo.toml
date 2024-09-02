@@ -1,0 +1,67 @@
+baseURL = 'https://example.org/'
+languageCode = 'en-us'
+title = 'Bruvberg'
+theme = 'typo'
+
+[taxonomies]
+tag = 'tags'
+
+# Google analytics code
+googleAnalytics = "G-xxxxxxxxx"
+
+[params]
+# Meta description
+description = "A fin blog"
+
+# Appearance settings
+theme = 'auto'
+colorPalette = 'default'
+hideHeader = false
+
+# Intro on main page, content is markdown
+homeIntroTitle = ''
+homeIntroContent = """
+**This portfolio started on September 1st, 2024. We buy one share of each stock JP Morgan recommends, as long as it's not already owned.** 
+
+> **Example:** **$SNPS** JPMorgan has raised its price target for Synopsys to $685 from $655 and maintains an Overweight rating on the stock. The analyst highlights strong demand for chip design software tools, evident in Synopsys’s solid July quarter results and guidance. The firm has adjusted its forward estimates following this “strong” performance.
+>
+> **Results:** Purchase 1 share of SNPS at market open. Monitor subsequent JP Morgan recommendations: if they update SNPS, decide to either close the position or continue holding based on their new advice.
+
+
+"""
+
+# Lists parameters
+paginationSize = 100
+listSummaries = true
+listDateFormat = '2 Jan 2006'
+
+# Breadcrumbs
+breadcrumbs = true
+
+# Main menu pages
+[[params.menu]]
+name = "home"
+url = "/"
+
+[[params.menu]]
+name = "trades"
+url = "/trades"
+
+[[params.menu]]
+name = "about"
+url = "/about"
+
+# Syntax highligth on code blocks
+[markup]
+[markup.highlight]
+style = 'algol'
+
+# Giscus comments
+[params.giscus]
+enable = false
+repo = "user/repo"
+repoid = "repoId"
+category = "General"
+categoryid = "categoryId"
+mapping = "pathname"
+theme = "preferred_color_scheme"

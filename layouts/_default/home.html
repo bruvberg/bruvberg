@@ -1,0 +1,234 @@
+{{ define "main" }}
+
+{{ .Content }}
+
+{{/* Intro summary section */}}
+
+{{ if or .Site.Params.homeIntroTitle .Site.Params.homeIntroContent }}<div id="portfolio">
+        <h2>Portfolio value: <span id="portfolioValue">$0.00</span></h2>
+    </div>
+    <canvas id="chart"></canvas>
+
+    <!-- Include Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Include Date Adapter for Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script>
+  const apiKey = '5HJLU9RU4SL6VYC8'; // Your Alpha Vantage API key
+  const symbol = 'SNPS'; // Example stock symbol
+  const apiUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${apiKey}`;
+
+  let chart; // Declare the chart variable
+  const startDate = new Date('2024-08-01'); // Start from August 1, 2024
+  const endDate = new Date('2024-12-31'); // End at December 31, 2024
+
+  // Interval for hourly updates
+  const updateInterval = 60 * 60 * 1000; // 60 minutes * 60 seconds * 1000 milliseconds
+
+  function shouldFetchData() {
+    const lastUpdate = localStorage.getItem('lastUpdate');
+    const currentTime = new Date().getTime();
+    return !lastUpdate || (currentTime - lastUpdate > updateInterval);
+  }
+
+  async function fetchStockData() {
+    // Check if we should fetch new data
+    if (!shouldFetchData()) {
+      console.log('Using cached data');
+      const cachedData = localStorage.getItem('stockData');
+      if (cachedData) {
+        const parsedData = JSON.parse(cachedData);
+        const cachedDates = parsedData.dates;
+        const cachedPrices = parsedData.prices;
+
+        // Check if cached data is within the desired date range
+        const isWithinRange = cachedDates[0] >= startDate.toISOString() && cachedDates[cachedDates.length - 1] <= endDate.toISOString();
+        if (isWithinRange) {
+          updateChart(cachedDates, cachedPrices);
+          document.getElementById('portfolioValue').textContent = `$${cachedPrices[cachedPrices.length - 1].toFixed(2)}`;
+          return;
+        }
+      }
+    }
+
+    try {
+      const response = await fetch(apiUrl);
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const data = await response.json();
+
+      // Log the response for debugging
+      console.log('API Response:', data);
+
+      if (data['Time Series (Daily)']) {
+        const timeSeries = data['Time Series (Daily)'];
+        const dates = Object.keys(timeSeries).reverse();
+        const prices = dates.map(date => parseFloat(timeSeries[date]['4. close']));
+
+        // Filter dates and prices for the date range
+        const filteredDates = [];
+        const filteredPrices = [];
+
+        for (let i = 0; i < dates.length; i++) {
+          const date = new Date(dates[i]);
+          if (date >= startDate && date <= endDate) {
+            filteredDates.push(dates[i]);
+            filteredPrices.push(prices[i]);
+          }
+        }
+
+        // Update the chart with new data
+        updateChart(filteredDates, filteredPrices);
+
+        // Update portfolio value
+        const portfolioValue = filteredPrices.length > 0 ? filteredPrices[filteredPrices.length - 1] : 0;
+        document.getElementById('portfolioValue').textContent = `$${portfolioValue.toFixed(2)}`;
+
+        // Store successful response in localStorage
+        const dataToSave = {
+          dates: filteredDates,
+          prices: filteredPrices
+        };
+        localStorage.setItem('stockData', JSON.stringify(dataToSave));
+
+        // Update last fetch timestamp
+        localStorage.setItem('lastUpdate', new Date().getTime().toString());
+      } else {
+        console.error('No Time Series data found in response:', data);
+      }
+    } catch (error) {
+      console.error('Error fetching stock data:', error);
+      alert('An error occurred while fetching stock data. Please try again later.');
+    }
+  }
+
+  function updateChart(dates, prices) {
+    const ctx = document.getElementById('chart').getContext('2d');
+
+    if (!chart) {
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [{
+            label: 'Portfolio Value',
+            data: prices,
+            borderColor: 'rgba(75, 192, 192, 1)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: true
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `$${context.raw}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'day',
+                tooltipFormat: 'll'
+              },
+              title: {
+                display: true,
+                text: 'Date'
+              },
+              min: startDate.toISOString(), // Ensure the x-axis starts from August 1, 2024
+              max: endDate.toISOString() // Ensure the x-axis ends at December 31, 2024
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Price'
+              },
+              ticks: {
+                callback: function(value) {
+                  return `$${value}`;
+                }
+              }
+            }
+          }
+        }
+      });
+    } else {
+      // Update existing chart
+      chart.data.labels = dates;
+      chart.data.datasets[0].data = prices;
+      chart.update();
+    }
+  }
+
+  // Initial data fetch
+  fetchStockData();
+
+  // Set the update interval
+  setInterval(fetchStockData, updateInterval);
+</script>
+
+
+    </script>
+<div class="intro">
+    {{ with .Site.Params.homeIntroTitle }}
+    <h1>{{ . }}</h1>
+    {{ end }}
+
+    {{ with .Site.Params.homeIntroContent }}
+    <p>{{ . | markdownify }}</p>
+    {{ end }}
+</div>
+{{ end }}
+
+{{/* Social Icons */}}
+
+{{ with site.Params.social }}
+<div class="social-icons">
+    {{- range . }}
+    <a href="{{ trim .url " " | safeURL }}" target="_blank"
+        rel="noopener noreferrer me"
+        title="{{ (.title | default .name) | title }}">
+        {{ partial "svg.html" . }}
+    </a>
+    {{- end }}
+</div>
+{{ end }}
+
+{{/* Collection Section */}}
+
+{{ if .Site.Params.homeCollection }}
+
+<div class="list-container">
+    {{ with .Site.Params.homeCollectionTitle}}
+    <h1> {{ . }} </h1>
+    {{ end }}
+
+    {{ $pages := where .Site.RegularPages "Section" .Site.Params.homeCollection
+    }}
+
+    {{ $paginationSize := 1}}
+    {{ if (gt .Site.Params.paginationSize 0) }}
+    {{ $paginationSize = .Site.Params.paginationSize }}
+    {{ end }}
+
+    {{ $paginator := .Paginate $pages $paginationSize }}
+
+    {{ range $index, $page := $paginator.Pages }}
+    {{ partial "post-entry.html" $page}}
+    {{ end }}
+
+    {{ partial "pagination-controls.html" $paginator}}
+
+    {{ end }}
+</div>
+
+{{ end }}
